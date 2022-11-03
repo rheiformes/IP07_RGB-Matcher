@@ -3,7 +3,7 @@
 //  IP07_RGB-Matcher
 //
 //  Created by Rai, Rhea on 10/28/22.
-//
+// TODO: timer, others
 
 import UIKit
 
@@ -19,35 +19,47 @@ class ViewController: UIViewController {
     
     //color boxes
     var goalBox = UILabel()
+    var goalBoxInfo = UILabel()
     var userBox = UILabel()
+    var userBoxInfo = UILabel()
+    
+    //game info
+    var gameInfo = UILabel()
     
     //sliders
     var redSlider = UISlider()
     var greenSlider = UISlider()
     var blueSlider = UISlider()
+    
     var colorTagDictionary = Dictionary<UISlider, Int>()
     var tagColorDictionary = Dictionary<Int, UISlider>()
     
-    //variables of rounds
-    var roundNum = 0
-    var currScore = 0
+    //score
     var score = 0
     var maxScoreRecorded = 0
+    var scoreDetails = UILabel()
     
     //color constants
     let RED_MAX = 1.0
     let GREEN_MAX = 1.0
     let BLUE_MAX = 1.0
     
-    //time constants
+    //color values (0 to 1.0)
+    var userRed = 1.0
+    var userGreen = 1.0
+    var userBlue = 1.0
+    
+    var goalRed = 1.0
+    var goalGreen = 1.0
+    var goalBlue = 1.0
+    
+    //timer
     let TIME_MAX = 10.0 // seconds
     var currSecCount = 0.0 //sec
+    var timerLbl = UILabel()
+    var timer = Timer()
+       
     
-    
-    
-    
-    
-
     
     
     override func viewDidLoad() {
@@ -62,29 +74,90 @@ class ViewController: UIViewController {
         tagColorDictionary = [0: redSlider, 1:greenSlider, 2:blueSlider]
         setBoxes()
         setSliders()
+        setInfoLabels()
         
         //start game
         setNewGoalBoxColor()
         
-        //TODO: add Timer, use time is left, add round functionalities
         
+    }
+    
+    func startTimer() {
+        timer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(timerRunner), userInfo: nil, repeats: true)
+    }
+    func resetGame() {
+        scoreDetails.removeFromSuperview()
+        
+        currSecCount = 0.0
+        timerLbl.text = "Time left: +\(String(TIME_MAX - Double(floor(100*currSecCount)/100))) sec"
+        setSliders()
+        setBoxes()
+        setNewGoalBoxColor()
+        
+    }
+    
+    @objc func timerRunner() {
+        if(timeIsLeft()) {
+            timerLbl.text = "Time left: +\(String(TIME_MAX - Double(floor(100*currSecCount)/100))) sec"
+            currSecCount+=0.1
+        }
+        else {
+            endGame()
+        }
+        
+    }
+    
+    func endGame() {
+        
+        self.timer.invalidate()
+        
+        self.view.addSubview(scoreDetails)
+        
+        self.redSlider.isEnabled = false
+        self.greenSlider.isEnabled = false
+        self.blueSlider.isEnabled = false
+    }
+    
+    @objc func startNewGame(_sender:UIButton) {
+        resetGame()
     }
     
     @objc func sliderValueChanged(_sender:UISlider) {
         //start timer if needed
-        //stop time and disable sliders if needed
+        if currSecCount < 0.1 {
+            startTimer()
+        }
         
         //change the user box color
-        userBox.backgroundColor = UIColor(red: CGFloat(redSlider.value), green: CGFloat(greenSlider.value), blue: CGFloat(blueSlider.value), alpha: 1)
+        userRed = Double(redSlider.value)
+        userGreen = Double(greenSlider.value)
+        userBlue = Double(blueSlider.value)
+        userBox.backgroundColor = UIColor(red: CGFloat(userRed), green: CGFloat(userGreen), blue: CGFloat(userBlue), alpha: 1)
+        updateScore()
+    }
+    
+    func updateScore() {
+        var diff = (1 - sqrt( pow(userRed-goalRed , 2) + pow(userBlue-goalBlue,2) + pow(userGreen-goalGreen,2)))
+        self.score = Int(100 * diff)
+        //testing:
+        //print("score:\(score) | goal:\(goalRed),\(goalBlue), \(goalGreen) | my:\(userRed),\(userBlue), \(userGreen)")
         
     }
+    
     
     func timeIsLeft() -> Bool {
         return self.currSecCount <= self.TIME_MAX
     }
     
     func setNewGoalBoxColor() {
-        goalBox.backgroundColor = UIColor(red: CGFloat.random(in: 0...RED_MAX), green: CGFloat.random(in: 0...GREEN_MAX), blue: CGFloat.random(in: 0...BLUE_MAX), alpha: 1)
+        
+        goalRed  = CGFloat.random(in: 0...RED_MAX)
+        goalGreen = CGFloat.random(in: 0...GREEN_MAX)
+        goalBlue = CGFloat.random(in: 0...BLUE_MAX)
+        
+        goalBox.backgroundColor = UIColor(red: goalRed, green: goalGreen, blue: goalBlue, alpha: 1)
+        
+        //UIColor(red: CGFloat.random(in: 0...RED_MAX), green: CGFloat.random(in: 0...GREEN_MAX), blue: CGFloat.random(in: 0...BLUE_MAX), alpha: 1)
     }
     
     fileprivate func setSliders() {
@@ -117,6 +190,8 @@ class ViewController: UIViewController {
         self.view.addSubview(blueSlider)
     }
 
+    
+    
     fileprivate func setScreenValues() {
         
         
@@ -141,7 +216,31 @@ class ViewController: UIViewController {
         self.goalBox.layer.borderColor = UIColor.black.cgColor
         self.goalBox.layer.borderWidth = 3
         self.view.addSubview(goalBox)
+        self.view.addSubview(goalBox)
+
     }
+    fileprivate func setInfoLabels() {
+        gameInfo.frame = CGRect(x: Int(self.userBox.frame.minX), y: Int(self.blueSlider.frame.maxY) + yBuffer/9, width: useableLength, height: 2*yBuffer/9)
+        gameInfo.text = "Slide the RGB values to match the goal"
+        self.view.addSubview(gameInfo)
+        
+        
+        userBoxInfo.frame = CGRect(x: Int(self.userBox.frame.minX), y: Int(self.userBox.frame.maxY) + yBuffer/9, width: Int(userBox.frame.width), height: 2*yBuffer/9)
+        userBoxInfo.text = "Your color"
+        userBoxInfo.textAlignment = .center
+        self.view.addSubview(userBoxInfo)
     
+        
+        goalBoxInfo.frame = CGRect(x: Int(self.goalBox.frame.minX), y: Int(self.goalBox.frame.maxY) + yBuffer/9, width: Int(userBox.frame.width), height: 2*yBuffer/9)
+        goalBoxInfo.text = "Goal color"
+        goalBoxInfo.textAlignment = .center
+        self.view.addSubview(goalBoxInfo)
+        
+        timerLbl.frame = CGRect(x: xBuffer, y: yBuffer, width: useableLength, height: yBuffer)
+        timerLbl.text = "Time left: +\(String(TIME_MAX - Double(floor(100*currSecCount)/100))) sec"
+        timerLbl.textAlignment = .center
+        self.view.addSubview(timerLbl)
+        //print("got here")
+    }
 }
 
